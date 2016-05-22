@@ -255,7 +255,7 @@ class OBNEI_PortInfo(Structure):
  #   // Returns: 0 if successful.
  #   int portInfo(size_t nodeid, size_t portid, OBNEI_PortInfo* pInfo);
 
-lib.portInfo.argtypes = [c_size_t, c_size_t, POINTER(OBNEI_PortInfo)]
+lib.portInfo.argtypes = [c_size_t, c_size_t, c_void_p]
 
     # // Request to connect a given port to a port on a node.
     # // Arguments: node ID, port's ID, source port's name (string)

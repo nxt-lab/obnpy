@@ -5,6 +5,7 @@ from obnextapi import *
 from warnings import *
 from datetime import datetime
 from weakref import *
+import pdb
 # check raising errors!!!!
 # hide some attributes like ids
 
@@ -27,7 +28,7 @@ class OBNCallback(object):
 class OBNPort(object):
 
 	def __init__(port, node, portid, name, portType, container, elementType):
-		port.node = ref(node) # not a copy but a reference to the parent node
+		port.node = proxy(node) # not a copy but a proxy to the parent node
 		port.id = portid
 		port.name = name
 		port.type = portType
@@ -88,21 +89,22 @@ class OBNPort(object):
 	def portInfo(port):
 		assert(port.node.valid), 'Node is not valid'
 		pInfo = OBNEI_PortInfo()
-		result = OBNEI_PortInfo(port.node.id, port.id, byref(pInfo))
+		result = lib.portInfo(port.node.id, port.id, byref(pInfo))
 		if result != 0: raise ValueError('Error getting port information',res)
 
 		# retrieve the key with value matching the portinfo enumeration
 		info = {}
-		info['type'] = OBNEI_PortType.keys()[OBNEI_PortType.values().index(OBNEI_PortInfo.type)]
-		info['container'] = OBNEI_ContainerType.keys()[OBNEI_ContainerType.values().index(OBNEI_PortInfo.container)]
-		info['elementType'] = OBNEI_ElementType.keys()[OBNEI_ElementType.values().index(OBNEI_PortInfo.elementType)]
+		info['type'] = OBNEI_PortType.keys()[OBNEI_PortType.values().index(pInfo.type)]
+		info['container'] = OBNEI_ContainerType.keys()[OBNEI_ContainerType.values().index(pInfo.container)]
+		info['elementType'] = OBNEI_ElementType.keys()[OBNEI_ElementType.values().index(pInfo.elementType)]
 
 		return info
 
-
+	# Returns: 0 if successful, otherwise error ID (last error message contains the error message).
 	def portConnect(port, srcPort):
 		assert(port.node.valid), 'Node is not valid'
 		result = lib.portConnect(port.node.id, port.id, srcPort)
+		return result
 
 class OBNNode(object):
 
@@ -123,14 +125,14 @@ class OBNNode(object):
 
 		# empty port dict
 		node.ports = {'input':{} ,'output':{}}
-		
+
 
 	# write desctiption
 	def create_port(node, portType, portName, containerType, elementType, strict = False, formatType = 'ProtoBuf'):
 		assert(node.valid), 'Node is not valid'
 		assert(containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
 		assert(elementType in OBNEI_ElementType), "invalid element type, valid types: 'logical', 'double', 'int32', 'int64', 'uint32', 'uint64'"
-		assert(port_type in OBNEI_PortType), "invalid port type, valid types: 'input', ''output, 'data'"
+		assert(portType in OBNEI_PortType), "invalid port type, valid types: 'input', ''output, 'data'"
 
 
 		if portType == 'input':
@@ -148,7 +150,7 @@ class OBNNode(object):
 										 OBNEI_ElementType[elementType])
 
 		if portid < 0: raise ValueError("Error creating input port [$result]: ")				
-		else: node.ports[portType][portName] = portid
+		else: node.ports[portType][portName] = OBNPort(node, portid, portName, portType, containerType, elementType)
 
 
 
