@@ -172,3 +172,98 @@ lib.maxUpdateID.restype = c_int
 max_blockid = lib.maxUpdateID()
 
 
+
+
+ # PORT INTERFACE
+
+OBNEI_PortType = {'input': 0, 'output': 1, 'data':2}
+OBNEI_ContainerType = {'scalar':0 ,'vector':1, 'matrix':2, 'binary':3 } 
+OBNEI_ElementType = {'logical': 0, 'double': 1, 'int32':2, 'int64':3, 'uint32': 4, 'uint64':5}
+OBNEI_FormatType = {'ProtoBuf': 0} 
+#
+#	// Create a new input port on a node
+#    // Arguments: node ID, port's name, format type, container type, element type, strict or not
+#    // Returns port's id; or negative number if error.
+#    // id is an integer starting from 0.
+ # int createInputPort(size_t id,
+ #                        const char* name,
+ #                        OBNEI_FormatType format,
+ #                        OBNEI_ContainerType container,
+ #                        OBNEI_ElementType element,
+ #                        bool strict);
+lib.createInputPort.argtypes = [c_size_t, c_char_p, c_uint, c_uint, c_uint, c_bool]
+
+    # // Create a new output port on a node
+    # // Arguments: node ID, port's name, format type, container type, element type
+    # // Returns port's id; or negative number if error.
+    # // id is an integer starting from 0.
+    # int createOutputPort(size_t id,
+    #                      const char* name,
+    #                      OBNEI_FormatType format,
+    #                      OBNEI_ContainerType container,
+    #                      OBNEI_ElementType element);
+
+lib.createOutputPort.argtypes = [c_size_t, c_char_p, c_uint, c_uint, c_uint]
+
+ #   /** These functions read the current value of a non-strict scalar input port, or pop the top/front value of a strict scalar input port.
+ #    Args: node ID, port's ID, pointer to scalar variable to receive the value.
+ #    Returns: 0 if successful; <0 if error; >0 if no value actually read (e.g., no pending value on a strict port).
+ #    For strict ports, if there is no value pending, the receiving variable won't be changed and the function will return 1.
+ #    */
+ #   int inputScalarDoubleGet(size_t nodeid, size_t portid, double* pval);      // Float64
+lib.inputScalarDoubleGet.argtypes = [c_size_t, c_size_t, POINTER(c_double)]
+ #   int inputScalarBoolGet(size_t nodeid, size_t portid, bool* pval);          // C++ bool (1 byte)
+lib.inputScalarBoolGet.argtypes = [c_size_t, c_size_t, POINTER(c_bool)]
+ #   int inputScalarInt32Get(size_t nodeid, size_t portid, int32_t* pval);      // Int32
+lib.inputScalarInt32Get.argtypes = [c_size_t, c_size_t, POINTER(c_int)]
+ #   int inputScalarInt64Get(size_t nodeid, size_t portid, int64_t* pval);      // Int64
+lib.inputScalarInt64Get.argtypes = [c_size_t, c_size_t, POINTER(c_longlong)]
+ #   int inputScalarUInt32Get(size_t nodeid, size_t portid, uint32_t* pval);    // UInt32
+lib.inputScalarUInt32Get.argtypes = [c_size_t, c_size_t, POINTER(c_uint)]
+ #   int inputScalarUInt64Get(size_t nodeid, size_t portid, uint64_t* pval);    // UInt64
+lib.inputScalarUInt64Get.argtypes = [c_size_t, c_size_t, POINTER(c_ulonglong)]
+
+
+
+
+ #   /** These functions set the value of a scalar output port, but does not send it immediately.
+ #    Usually the value will be sent out at the end of the event callback (UPDATE_Y).
+ #    Args: node ID, port's ID, scalar value.
+ #    Returns: 0 if successful; <0 if error
+ #    */
+ #   int outputScalarDoubleSet(size_t nodeid, size_t portid, double val);      // Float64
+lib.outputScalarDoubleSet.argtypes = [c_size_t, c_size_t, c_double]
+ #   int outputScalarBoolSet(size_t nodeid, size_t portid, bool val);          // C++ bool (1 byte)
+lib.outputScalarBoolSet.argtypes = [c_size_t, c_size_t, c_bool]
+ #   int outputScalarInt32Set(size_t nodeid, size_t portid, int32_t val);      // Int32
+lib.outputScalarInt32Set.argtypes = [c_size_t, c_size_t, c_int]
+ #   int outputScalarInt64Set(size_t nodeid, size_t portid, int64_t val);      // Int64
+lib.outputScalarInt64Set.argtypes = [c_size_t, c_size_t, c_longlong]
+ #   int outputScalarUInt32Set(size_t nodeid, size_t portid, uint32_t val);    // UInt32
+lib.outputScalarUInt32Set.argtypes = [c_size_t, c_size_t, c_uint]
+ #   int outputScalarUInt64Set(size_t nodeid, size_t portid, uint64_t val);    // UInt64
+lib.outputScalarUInt64Set.argtypes = [c_size_t, c_size_t, c_ulonglong]
+
+
+
+class OBNEI_PortInfo(Structure):
+    _fields_ = [("type", c_uint),
+                ("container", c_uint),
+                ("elementType", c_uint)]
+ #   // Returns information about a port.
+ #   // Arguments: node ID, port's ID, pointer to an OBNEI_PortInfo structure to receive info
+ #   // Returns: 0 if successful.
+ #   int portInfo(size_t nodeid, size_t portid, OBNEI_PortInfo* pInfo);
+
+lib.portInfo.argtypes = [c_size_t, c_size_t, POINTER(OBNEI_PortInfo)]
+
+    # // Request to connect a given port to a port on a node.
+    # // Arguments: node ID, port's ID, source port's name (string)
+    # // Returns: 0 if successful, otherwise error ID (last error message contains the error message).
+    # int portConnect(size_t nodeid, size_t portid, const char* srcport);
+lib.portConnect.argtypes = [c_size_t, c_size_t, c_char_p]
+
+    # // Enables the message received event at an input port
+    # // Args: node ID, port's ID
+    # // Returns: 0 if successful
+    # int portEnableRcvEvent(size_t nodeid, size_t portid);
