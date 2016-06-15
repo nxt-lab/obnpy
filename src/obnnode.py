@@ -26,7 +26,6 @@ class OBNCallback(object):
 		# call function with optional arguments and keyword arguments
 		self.function(*self.args, **self.kwargs)
 
-
 # split port class in two
 class OBNPort(object):
 
@@ -43,32 +42,8 @@ class OBNPort(object):
 		assert(port.node.valid), 'Node is not valid'
 		if port.container == 'scalar':
 
-
 			val = ctypesdict[port.elementType](0)
 			result = inputScalarGet[port.elementType](port.node.id, port.id, byref(val))
-
-			# if port.elementType == 'double':
-				
-			# 	val = ctypesdict[port.elementType](0)
-			# 	result = inputScalarGet[port.elementType](port.node.id, port.id, byref(val))
-			# 	#pdb.set_trace()
-			# 	#val = c_double()
-			# 	#result = lib.inputScalarDoubleGet(port.node.id, port.id, byref(val))
-			# elif port.elementType == 'bool':
-			# 	val = c_bool()
-			# 	result = lib.inputScalarBoolGet(port.node.id, port.id, byref(val))
-			# elif port.elementType == 'int32':
-			# 	val = c_int()
-			# 	result = lib.inputScalarInt32Get(port.node.id, port.id, byref(val))
-			# elif port.elementType == 'int64':
-			# 	val = c_longlong()
-			# 	result = lib.inputScalarInt64Get(port.node.id, port.id, byref(val))
-			# elif port.elementType == 'uint32':
-			# 	val = c_uint()
-			# 	result = lib.inputScalarUInt32Get(port.node.id, port.id, byref(val))
-			# elif port.elementType == 'uint64':
-			# 	val = c_ulonglong()
-			# 	result = lib.inputScalarUInt64Get(port.node.id, port.id, byref(val))	
 			
 			#pdb.set_trace()
 			if result == 0:		value = val.value
@@ -76,6 +51,7 @@ class OBNPort(object):
 			#pdb.set_trace()
 
 		elif port.container == 'vector':
+
 			c_elementType = ctypesdict[port.elementType]
 			val = POINTER(c_elementType)()
 			manobj = c_void_p()
@@ -91,25 +67,8 @@ class OBNPort(object):
 				value = valbuff
 			else: value = defVal
 
-
-			# if port.elementType == 'double':								
-			# 	#val = num.empty(0, dtype = 'double')
-			# 	val = POINTER(c_double)()
-			# 	manobj = c_void_p()
-			# 	size = c_size_t(0)
-			# 	#val.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-			# 	result = lib.inputVectorDoubleGet(port.node.id, port.id, byref(manobj) , byref(val) , byref(size))
-			# 	# get the value directly		
-			# 	# c_arrptr = cast(val,POINTER(c_double*size.value))
-			# 	# value = num.array(c_arrptr.contents,dtype=num.float64)
-			# 	if result == 0:
-			# 		valbuff = num.empty([size.value],dtype=num.float64)
-			# 		if size.value > 0 : lib.inputVectorDoubleRelease(manobj, valbuff.ctypes.data_as(POINTER(c_double)))
-			# 		else : lib.inputVectorDoubleRelease(manobj, None)
-			# 		value = valbuff
-			# else: value = defVal
-		
 		elif port.container == 'matrix':
+
 			c_elementType = ctypesdict[port.elementType]
 			val = POINTER(c_elementType)()
 			manobj = c_void_p()
@@ -127,34 +86,6 @@ class OBNPort(object):
 				value = valbuff
 	#		pdb.set_trace()
 			else: value = defVal
-
-
-
-
-		# 	if port.elementType == 'double':								
-		# 		#val = num.empty(0, dtype = 'double')
-		# 		val = POINTER(c_double)()
-		# 		manobj = c_void_p()
-		# 		nrows = c_size_t()
-		# 		ncols = c_size_t()
-		# 		#val.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-		# 		result = lib.inputMatrixDoubleGet(port.node.id, port.id, byref(manobj) , byref(val) , byref(nrows), byref(ncols))
-		# 		## get the value directly		
-		# 		#c_matptr = cast(val,POINTER((c_double*ncols.value)*nrows.value))
-		# 		#value = num.array(c_matptr.contents,dtype=num.float64)
-		# 		if result == 0:
-		# 			valbuff = num.empty([nrows.value,ncols.value],dtype=num.float64)
-		# 			#valbuff = ((c_double*ncols.value)*nrows.value)()
-		# 			if (nrows.value > 0) & (ncols.value > 0) : 
-		# 				lib.inputMatrixDoubleRelease(manobj, valbuff.ctypes.data_as(POINTER(c_double)))
-		# 				#lib.inputMatrixDoubleRelease(manobj, byref(valbuff))
-		# 			else : lib.inputMatrixDoubleRelease(manobj, None)
-		# 			value = valbuff
-		# #		pdb.set_trace()
-		# 		else: value = defVal
-
-
-
 		
 		if result < 0: raise ValueError('Error writing to port',res)		
 		else: return value
@@ -166,37 +97,10 @@ class OBNPort(object):
 
 			result = outputScalarSet[port.elementType](port.node.id, port.id, val)
 
-			# if port.elementType == 'double':
-			# 	#val = c_double(val)
-			# 	result = lib.outputScalarDoubleSet(port.node.id, port.id, val)
-			# elif port.elementType == 'bool':
-			# 	#val = c_bool(val)
-			# 	result = lib.outputScalarBoolSet(port.node.id, port.id, val)
-			# elif port.elementType == 'int32':
-			# 	#val = c_int(val)
-			# 	result = lib.outputScalarInt32Set(port.node.id, port.id, val)
-			# elif port.elementType == 'int64':
-			# 	#val = c_longlong(val)
-			# 	result = lib.outputScalarInt64Set(port.node.id, port.id, val)
-			# elif port.elementType == 'uint32':
-			# 	#val = c_uint(val)
-			# 	result = lib.outputScalarUInt32Set(port.node.id, port.id, val)
-			# elif port.elementType == 'uint64':
-			# 	#val = c_ulonglong(val)
-			# 	result = lib.outputScalarUInt64Set(port.node.id, port.id, val)
-
 		elif port.container == 'vector':
-
 			# cast input to the correct type for the port
 			val = val.astype(num.dtype(port.elementType))
 			result = outputVectorSet[port.elementType](port.node.id, port.id, val.ctypes.data_as(POINTER(c_double)), c_size_t(len(val)))
-
-			# if port.elementType == 'double':	
-			# 	#pdb.set_trace()							
-			# 	#result = lib.outputVectorDoubleSet(port.node.id, port.id, val, len(val))
-			# 	val = num.float64(val)
-			# 	result = lib.outputVectorDoubleSet(port.node.id, port.id, val.ctypes.data_as(POINTER(c_double)), c_size_t(len(val)))
-				
 
 		elif port.container == 'matrix':
 
@@ -204,14 +108,6 @@ class OBNPort(object):
 			val = val.astype(num.dtype(port.elementType))
 			(nrows,ncols) = val.shape
 			result = outputMatrixSet[port.elementType](port.node.id, port.id, val.ctypes.data_as(POINTER(c_double)), c_size_t(nrows),c_size_t(ncols))			
-
-			# if port.elementType == 'double':	
-			# 	#pdb.set_trace()							
-			# 	#result = lib.outputVectorDoubleSet(port.node.id, port.id, val, len(val))
-			# 	val = num.float64(val)
-			# 	nrows = val.shape[0]
-			# 	ncols = val.shape[1]
-			# 	result = lib.outputMatrixDoubleSet(port.node.id, port.id, val.ctypes.data_as(POINTER(c_double)), c_size_t(nrows),c_size_t(ncols))
 
 		if result < 0: raise ValueError('Error writing to port',res)
 		return result
