@@ -2,7 +2,8 @@
 import os
 from ctypes import *
 import glob
-
+import numpy as num
+from numpy.ctypeslib import ndpointer
 # QUESTIONS
 # NO REF TO MQTT OR YARP ? HOW TO SPECIFY ?
 
@@ -178,7 +179,7 @@ max_blockid = lib.maxUpdateID()
 
 OBNEI_PortType = {'input': 0, 'output': 1, 'data':2}
 OBNEI_ContainerType = {'scalar':0 ,'vector':1, 'matrix':2, 'binary':3 } 
-OBNEI_ElementType = {'logical': 0, 'double': 1, 'int32':2, 'int64':3, 'uint32': 4, 'uint64':5}
+OBNEI_ElementType = {'bool': 0, 'double': 1, 'int32':2, 'int64':3, 'uint32': 4, 'uint64':5}
 OBNEI_FormatType = {'ProtoBuf': 0} 
 #
 #	// Create a new input port on a node
@@ -205,6 +206,36 @@ lib.createInputPort.argtypes = [c_size_t, c_char_p, c_uint, c_uint, c_uint, c_bo
 
 lib.createOutputPort.argtypes = [c_size_t, c_char_p, c_uint, c_uint, c_uint]
 
+
+
+
+
+
+
+
+#             if port.elementType == 'double':
+#                 val = c_double()
+#                 result = lib.inputScalarDoubleGet(port.node.id, port.id, byref(val))
+#             elif port.elementType == 'bool':
+#                 val = c_bool()
+#                 result = lib.inputScalarBoolGet(port.node.id, port.id, byref(val))
+#             elif port.elementType == 'int32':
+#                 val = c_int()
+#                 result = lib.inputScalarInt32Get(port.node.id, port.id, byref(val))
+#             elif port.elementType == 'int64':
+#                 val = c_longlong()
+#                 result = lib.inputScalarInt64Get(port.node.id, port.id, byref(val))
+#             elif port.elementType == 'uint32':
+#                 val = c_uint()
+#                 result = lib.inputScalarUInt32Get(port.node.id, port.id, byref(val))
+#             elif port.elementType == 'uint64':
+#                 val = c_ulonglong()
+#                 result = lib.inputScalarUInt64Get(port.node.id, port.id, byref(val))
+
+
+ctypesdict = {'double':c_double,'bool':c_bool,'int32':c_int, 'int64':c_longlong, 'uint32': c_uint, 'uint64': c_ulonglong}
+#numtypesdict = {'double':num.double,'bool':num.bool,'int32':num.int32, 'int64':num.int64, 'uint32': num.uint32, 'uint64': num.uint64}
+
  #   /** These functions read the current value of a non-strict scalar input port, or pop the top/front value of a strict scalar input port.
  #    Args: node ID, port's ID, pointer to scalar variable to receive the value.
  #    Returns: 0 if successful; <0 if error; >0 if no value actually read (e.g., no pending value on a strict port).
@@ -223,7 +254,13 @@ lib.inputScalarUInt32Get.argtypes = [c_size_t, c_size_t, POINTER(c_uint)]
  #   int inputScalarUInt64Get(size_t nodeid, size_t portid, uint64_t* pval);    // UInt64
 lib.inputScalarUInt64Get.argtypes = [c_size_t, c_size_t, POINTER(c_ulonglong)]
 
-
+inputScalarGet = {}
+inputScalarGet['double'] = lib.inputScalarDoubleGet
+inputScalarGet['bool']   = lib.inputScalarBoolGet
+inputScalarGet['int32']  = lib.inputScalarInt32Get
+inputScalarGet['int64']  = lib.inputScalarInt64Get
+inputScalarGet['uint32'] = lib.inputScalarUInt32Get
+inputScalarGet['uint64'] = lib.inputScalarUInt64Get
 
 
  #   /** These functions set the value of a scalar output port, but does not send it immediately.
@@ -243,6 +280,155 @@ lib.outputScalarInt64Set.argtypes = [c_size_t, c_size_t, c_longlong]
 lib.outputScalarUInt32Set.argtypes = [c_size_t, c_size_t, c_uint]
  #   int outputScalarUInt64Set(size_t nodeid, size_t portid, uint64_t val);    // UInt64
 lib.outputScalarUInt64Set.argtypes = [c_size_t, c_size_t, c_ulonglong]
+
+
+# create dictionary of function handles for different element types
+outputScalarSet = {}
+outputScalarSet['double'] = lib.outputScalarDoubleSet
+outputScalarSet['bool']   = lib.outputScalarBoolSet
+outputScalarSet['int32']  = lib.outputScalarInt32Set
+outputScalarSet['int64']  = lib.outputScalarInt64Set
+outputScalarSet['uint32'] = lib.outputScalarUInt32Set
+outputScalarSet['uint64'] = lib.outputScalarUInt64Set
+
+
+# === GET FUNCTIONS === #
+
+# VECTORS
+
+    # /** These functions read (or pop) the value from a non-strict (or strict) vector/matrix input port.
+    #  For each port, there are two functions: *Get and *Release.
+    #  - The *Get(nodeid, portid, void** pMan, <elem-type>** pVals, size_t* nrows, size_t* ncols) [for vector version, there is no ncols] gets the array of values and put its pointer to pVals (if pVals = NULL this won't be done) and also returns its dimensions (nrows, ncols) as well as a management object in pMan.  It is critical that pMan is received and used later on because it will be used to release the memory used in C.
+    #  - *Release(void* pMan, <elem-type>* pBuf) copies the values to buffer pBuf if pBuf is not nill, then releases the management object.  When a port is read by *Get, it may allocate temporary memory and may be locked (so that new incoming messages will not override the current value).  It's CRITICALLY IMPORTANT to call *Release on the returned management object to release the memory and the lock on the port.  The copying is optional, only if pBuf is valid, which must be allocated by the external language.  This can be used instead of copying the data from pVals to the buffer in the external language (e.g., if pVals in *Get is NULL or ignored).
+
+    #  There are two ways to use the returned values:
+    #  - The safest way is to copy the values to a vector / matrix managed by the external language, via pVals returned by *Get or via pBuf in *Release.
+    #  - The values in pVals can also be used directly BUT MUST NOT BE CHANGED (i.e., they are constant) and *Release MUST BE CALLED after this is done.  For example if we simply want to take the sum of the elements, this can be the most efficient way.  However, note that between *Get and *Release, the port is usually locked, hence whatever operations are done on the values should be quick.  Another use case could be to access some elements to decide if we want to use the values in further calculation, in that case we can copy the values over, otherwise we just ignore them.
+
+    #  Function *Get(...) returns 0 if successful, <0 if error; >0 if no value actually read (e.g., no pending value on a strict port).
+    #  For strict ports, if there is no value pending, the receiving variables won't be changed and the function will return 1, and there is no need to call *Release (obviously).  In other words, only call *Release if *Get returns 0.
+    #  */
+    # int inputVectorDoubleGet(size_t nodeid, size_t portid, void** pMan, const double** pVals, size_t* nelems);      // Float64
+    # void inputVectorDoubleRelease(void* pMan, double* pBuf);
+
+#lib.inputVectorDoubleGet.argtypes = [c_size_t, c_size_t, POINTER(c_void_p), POINTER(ndpointer(c_double)) ,POINTER(c_size_t) ]
+#lib.inputVectorDoubleGet.argtypes = [c_size_t, c_size_t, POINTER(c_void_p), ndpointer(c_double) ,POINTER(c_size_t) ]
+#lib.inputVectorDoubleRelease.argtypes = [c_void_p, ndpointer(c_double)]
+
+lib.inputVectorDoubleGet.argtypes = [c_size_t, c_size_t, POINTER(c_void_p), POINTER(POINTER(c_double)),POINTER(c_size_t) ]
+lib.inputVectorDoubleRelease.argtypes = [c_void_p, POINTER(c_double)]
+
+
+inputVectorGet = {}
+inputVectorGet['double'] = lib.inputVectorDoubleGet
+inputVectorGet['bool']   = lib.inputVectorBoolGet
+inputVectorGet['int32']  = lib.inputVectorInt32Get
+inputVectorGet['int64']  = lib.inputVectorInt64Get
+inputVectorGet['uint32'] = lib.inputVectorUInt32Get
+inputVectorGet['uint64'] = lib.inputVectorUInt64Get
+
+inputVectorRelease = {}
+inputVectorRelease['double'] = lib.inputVectorDoubleRelease
+inputVectorRelease['bool']   = lib.inputVectorBoolRelease
+inputVectorRelease['int32']  = lib.inputVectorInt32Release
+inputVectorRelease['int64']  = lib.inputVectorInt64Release
+inputVectorRelease['uint32'] = lib.inputVectorUInt32Release
+inputVectorRelease['uint64'] = lib.inputVectorUInt64Release
+
+# MATRIX
+
+ #   int inputMatrixDoubleGet(size_t nodeid, size_t portid, void** pMan, const double** pVals, size_t* nrows, size_t* ncols);      // Float64
+#    void inputMatrixDoubleRelease(void* pMan, double* pBuf);
+
+lib.inputMatrixDoubleGet.argtypes = [c_size_t, c_size_t, POINTER(c_void_p), POINTER(POINTER(c_double)),POINTER(c_size_t) ,POINTER(c_size_t) ]
+lib.inputMatrixDoubleRelease.argtypes = [c_void_p, POINTER(c_double)]
+
+inputMatrixGet = {}
+inputMatrixGet['double'] = lib.inputMatrixDoubleGet
+inputMatrixGet['bool']   = lib.inputMatrixBoolGet
+inputMatrixGet['int32']  = lib.inputMatrixInt32Get
+inputMatrixGet['int64']  = lib.inputMatrixInt64Get
+inputMatrixGet['uint32'] = lib.inputMatrixUInt32Get
+inputMatrixGet['uint64'] = lib.inputMatrixUInt64Get
+
+inputMatrixRelease = {}
+inputMatrixRelease['double'] = lib.inputMatrixDoubleRelease
+inputMatrixRelease['bool']   = lib.inputMatrixBoolRelease
+inputMatrixRelease['int32']  = lib.inputMatrixInt32Release
+inputMatrixRelease['int64']  = lib.inputMatrixInt64Release
+inputMatrixRelease['uint32'] = lib.inputMatrixUInt32Release
+inputMatrixRelease['uint64'] = lib.inputMatrixUInt64Release
+
+
+# ==== SET FUNCTIONS ===== #
+
+
+    # /** These functions set the vector/matrix value of a vector/matrix output port, but does not send it immediately.
+    #  Usually the value will be sent out at the end of the event callback (UPDATE_Y).
+    #  The data are copied over to the port's internal memory, so there is no need to maintain the array pval after calling these functions (i.e., the caller is free to deallocate the memory of pval).
+    #  Args: node ID, port's ID, <elem-type>* source, size_t nrows, size_t ncols  (for vector: size_t nelems)
+    #  Returns: 0 if successful; <0 if error
+    #  */
+
+# VECTOR
+
+    # int outputVectorDoubleSet(size_t nodeid, size_t portid, const double* pval, size_t nelems);      // Float64
+
+#lib.outputVectorDoubleSet.argtypes = [c_size_t, c_size_t, ndpointer(c_double), c_size_t]
+lib.outputVectorDoubleSet.argtypes = [c_size_t, c_size_t, POINTER(c_double), c_size_t]
+#lib.outputVectorDoubleSet.argtypes = [c_size_t, c_size_t, POINTER(ndpointer(c_double)), c_size_t]
+outputVectorSet = {}
+outputVectorSet['double'] = lib.outputVectorDoubleSet
+outputVectorSet['bool']   = lib.outputVectorBoolSet
+outputVectorSet['int32']  = lib.outputVectorInt32Set
+outputVectorSet['int64']  = lib.outputVectorInt64Set
+outputVectorSet['uint32'] = lib.outputVectorUInt32Set
+outputVectorSet['uint64'] = lib.outputVectorUInt64Set
+
+# MATRIX
+
+lib.outputMatrixDoubleSet.argtypes = [c_size_t, c_size_t, POINTER(c_double), c_size_t, c_size_t]
+
+
+
+
+outputMatrixSet = {}
+outputMatrixSet['double'] = lib.outputMatrixDoubleSet
+outputMatrixSet['bool']   = lib.outputMatrixBoolSet
+outputMatrixSet['int32']  = lib.outputMatrixInt32Set
+outputMatrixSet['int64']  = lib.outputMatrixInt64Set
+outputMatrixSet['uint32'] = lib.outputMatrixUInt32Set
+outputMatrixSet['uint64'] = lib.outputMatrixUInt64Set
+
+
+
+
+
+
+
+
+
+
+
+#    // Synchronous sending: request an output port to send its current value/message immediately and wait until it can be sent.
+#    // Note that this function does not accept a value to be sent; instead the value/message of the port is set by another function.
+#    // Args: node ID, port's ID
+#    // Returns: zero if successful
+#    // This function will return an error if the given port is not a physical output port.
+#    int outputSendSync(size_t nodeid, size_t portid);
+
+lib.outputSendSync.argtypes = [c_size_t, c_size_t]
+
+
+
+    # // Is there a value pending at an input port?
+    # // Args: node ID, port's ID
+    # // Returns: true if >0, false if =0, error if <0.
+    # int inputPending(size_t nodeid, size_t portid);
+
+lib.inputPending.argtypes = [c_size_t, c_size_t]
+
+
 
 
 

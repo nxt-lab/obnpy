@@ -6,6 +6,8 @@ from warnings import *
 from datetime import datetime
 from weakref import *
 import pdb
+import ctypes
+import numpy as num
 # check raising errors!!!!
 # hide some attributes like ids
 
@@ -25,6 +27,7 @@ class OBNCallback(object):
 		self.function(*self.args, **self.kwargs)
 
 
+# split port class in two
 class OBNPort(object):
 
 	def __init__(port, node, portid, name, portType, container, elementType):
@@ -36,55 +39,195 @@ class OBNPort(object):
 		port.elementType = elementType
 		port.valid = True
 
-	def input(port):
-
+	def get(port, defVal = None):
+		assert(port.node.valid), 'Node is not valid'
 		if port.container == 'scalar':
 
-			if port.element == 'double':
-				val = c_double()
-				result = lib.inputScalarDoubleGet(port.node.id, port.id, byref(val))
-			elif port.element == 'bool':
-				val = c_bool()
-				result = lib.inputScalarBoolGet(port.node.id, port.id, byref(val))
-			elif port.element == 'int32':
-				val = c_int()
-				result = lib.inputScalarInt32Get(port.node.id, port.id, byref(val))
-			elif port.element == 'int64':
-				val = c_longlong()
-				result = lib.inputScalarInt64Get(port.node.id, port.id, byref(val))
-			elif port.element == 'uint32':
-				val = c_uint()
-				result = lib.inputScalarUInt32Get(port.node.id, port.id, byref(val))
-			elif port.element == 'uint64':
-				val = c_ulonglong()
-				result = lib.inputScalarUInt64Get(port.node.id, port.id, byref(val))
 
-		return val.value
+			val = ctypesdict[port.elementType](0)
+			result = inputScalarGet[port.elementType](port.node.id, port.id, byref(val))
 
-	def output(port,val):
+			# if port.elementType == 'double':
+				
+			# 	val = ctypesdict[port.elementType](0)
+			# 	result = inputScalarGet[port.elementType](port.node.id, port.id, byref(val))
+			# 	#pdb.set_trace()
+			# 	#val = c_double()
+			# 	#result = lib.inputScalarDoubleGet(port.node.id, port.id, byref(val))
+			# elif port.elementType == 'bool':
+			# 	val = c_bool()
+			# 	result = lib.inputScalarBoolGet(port.node.id, port.id, byref(val))
+			# elif port.elementType == 'int32':
+			# 	val = c_int()
+			# 	result = lib.inputScalarInt32Get(port.node.id, port.id, byref(val))
+			# elif port.elementType == 'int64':
+			# 	val = c_longlong()
+			# 	result = lib.inputScalarInt64Get(port.node.id, port.id, byref(val))
+			# elif port.elementType == 'uint32':
+			# 	val = c_uint()
+			# 	result = lib.inputScalarUInt32Get(port.node.id, port.id, byref(val))
+			# elif port.elementType == 'uint64':
+			# 	val = c_ulonglong()
+			# 	result = lib.inputScalarUInt64Get(port.node.id, port.id, byref(val))	
+			
+			#pdb.set_trace()
+			if result == 0:		value = val.value
+			else: value = defVal
+			#pdb.set_trace()
 
+		elif port.container == 'vector':
+			c_elementType = ctypesdict[port.elementType]
+			val = POINTER(c_elementType)()
+			manobj = c_void_p()
+			size = c_size_t(0)
+			result = inputVectorGet[port.elementType](port.node.id, port.id, byref(manobj) , byref(val) , byref(size))
+			# get the value directly		
+			# c_arrptr = cast(val,POINTER(c_elementType*size.value))
+			# value = num.array(c_arrptr.contents,num.dtype(port.elementType))
+			if result == 0:
+				valbuff = num.empty([size.value],num.dtype(port.elementType))
+				if size.value > 0 : inputVectorRelease[port.elementType](manobj, valbuff.ctypes.data_as(POINTER(c_elementType)))
+				else : inputVectorRelease[port.elementType](manobj, None)
+				value = valbuff
+			else: value = defVal
+
+
+			# if port.elementType == 'double':								
+			# 	#val = num.empty(0, dtype = 'double')
+			# 	val = POINTER(c_double)()
+			# 	manobj = c_void_p()
+			# 	size = c_size_t(0)
+			# 	#val.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+			# 	result = lib.inputVectorDoubleGet(port.node.id, port.id, byref(manobj) , byref(val) , byref(size))
+			# 	# get the value directly		
+			# 	# c_arrptr = cast(val,POINTER(c_double*size.value))
+			# 	# value = num.array(c_arrptr.contents,dtype=num.float64)
+			# 	if result == 0:
+			# 		valbuff = num.empty([size.value],dtype=num.float64)
+			# 		if size.value > 0 : lib.inputVectorDoubleRelease(manobj, valbuff.ctypes.data_as(POINTER(c_double)))
+			# 		else : lib.inputVectorDoubleRelease(manobj, None)
+			# 		value = valbuff
+			# else: value = defVal
+		
+		elif port.container == 'matrix':
+			c_elementType = ctypesdict[port.elementType]
+			val = POINTER(c_elementType)()
+			manobj = c_void_p()
+			nrows = c_size_t()
+			ncols = c_size_t()
+			result = inputMatrixGet[port.elementType](port.node.id, port.id, byref(manobj) , byref(val) , byref(nrows), byref(ncols))
+			## get the value directly		
+			#c_matptr = cast(val,POINTER((c_elementType*ncols.value)*nrows.value))
+			#value = num.array(c_matptr.contents,num.dtype(port.elementType))
+			if result == 0:
+				valbuff = num.empty([nrows.value,ncols.value],num.dtype(port.elementType))
+				if (nrows.value > 0) & (ncols.value > 0) : 
+					inputMatrixRelease[port.elementType](manobj, valbuff.ctypes.data_as(POINTER(c_elementType)))
+				else : inputMatrixRelease[port.elementType](manobj, None)
+				value = valbuff
+	#		pdb.set_trace()
+			else: value = defVal
+
+
+
+
+		# 	if port.elementType == 'double':								
+		# 		#val = num.empty(0, dtype = 'double')
+		# 		val = POINTER(c_double)()
+		# 		manobj = c_void_p()
+		# 		nrows = c_size_t()
+		# 		ncols = c_size_t()
+		# 		#val.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+		# 		result = lib.inputMatrixDoubleGet(port.node.id, port.id, byref(manobj) , byref(val) , byref(nrows), byref(ncols))
+		# 		## get the value directly		
+		# 		#c_matptr = cast(val,POINTER((c_double*ncols.value)*nrows.value))
+		# 		#value = num.array(c_matptr.contents,dtype=num.float64)
+		# 		if result == 0:
+		# 			valbuff = num.empty([nrows.value,ncols.value],dtype=num.float64)
+		# 			#valbuff = ((c_double*ncols.value)*nrows.value)()
+		# 			if (nrows.value > 0) & (ncols.value > 0) : 
+		# 				lib.inputMatrixDoubleRelease(manobj, valbuff.ctypes.data_as(POINTER(c_double)))
+		# 				#lib.inputMatrixDoubleRelease(manobj, byref(valbuff))
+		# 			else : lib.inputMatrixDoubleRelease(manobj, None)
+		# 			value = valbuff
+		# #		pdb.set_trace()
+		# 		else: value = defVal
+
+
+
+		
+		if result < 0: raise ValueError('Error writing to port',res)		
+		else: return value
+		
+
+	def set(port,val):
+		assert(port.node.valid), 'Node is not valid'
 		if port.container == 'scalar':
 
-			if port.element == 'double':
-				val = c_double()
-				result = lib.outputScalarDoubleGet(port.node.id, port.id, val)
-			elif port.element == 'bool':
-				val = c_bool()
-				result = lib.outputScalarBoolGet(port.node.id, port.id, val)
-			elif port.element == 'int32':
-				val = c_int()
-				result = lib.outputScalarInt32Get(port.node.id, port.id, val)
-			elif port.element == 'int64':
-				val = c_longlong()
-				result = lib.outputScalarInt64Get(port.node.id, port.id, val)
-			elif port.element == 'uint32':
-				val = c_uint()
-				result = lib.outputScalarUInt32Get(port.node.id, port.id, val)
-			elif port.element == 'uint64':
-				val = c_ulonglong()
-				result = lib.outputScalarUInt64Get(port.node.id, port.id, val)
+			result = outputScalarSet[port.elementType](port.node.id, port.id, val)
 
-		return val.value
+			# if port.elementType == 'double':
+			# 	#val = c_double(val)
+			# 	result = lib.outputScalarDoubleSet(port.node.id, port.id, val)
+			# elif port.elementType == 'bool':
+			# 	#val = c_bool(val)
+			# 	result = lib.outputScalarBoolSet(port.node.id, port.id, val)
+			# elif port.elementType == 'int32':
+			# 	#val = c_int(val)
+			# 	result = lib.outputScalarInt32Set(port.node.id, port.id, val)
+			# elif port.elementType == 'int64':
+			# 	#val = c_longlong(val)
+			# 	result = lib.outputScalarInt64Set(port.node.id, port.id, val)
+			# elif port.elementType == 'uint32':
+			# 	#val = c_uint(val)
+			# 	result = lib.outputScalarUInt32Set(port.node.id, port.id, val)
+			# elif port.elementType == 'uint64':
+			# 	#val = c_ulonglong(val)
+			# 	result = lib.outputScalarUInt64Set(port.node.id, port.id, val)
+
+		elif port.container == 'vector':
+
+			# cast input to the correct type for the port
+			val = val.astype(num.dtype(port.elementType))
+			result = outputVectorSet[port.elementType](port.node.id, port.id, val.ctypes.data_as(POINTER(c_double)), c_size_t(len(val)))
+
+			# if port.elementType == 'double':	
+			# 	#pdb.set_trace()							
+			# 	#result = lib.outputVectorDoubleSet(port.node.id, port.id, val, len(val))
+			# 	val = num.float64(val)
+			# 	result = lib.outputVectorDoubleSet(port.node.id, port.id, val.ctypes.data_as(POINTER(c_double)), c_size_t(len(val)))
+				
+
+		elif port.container == 'matrix':
+
+			# cast input to the correct type for the port
+			val = val.astype(num.dtype(port.elementType))
+			(nrows,ncols) = val.shape
+			result = outputMatrixSet[port.elementType](port.node.id, port.id, val.ctypes.data_as(POINTER(c_double)), c_size_t(nrows),c_size_t(ncols))			
+
+			# if port.elementType == 'double':	
+			# 	#pdb.set_trace()							
+			# 	#result = lib.outputVectorDoubleSet(port.node.id, port.id, val, len(val))
+			# 	val = num.float64(val)
+			# 	nrows = val.shape[0]
+			# 	ncols = val.shape[1]
+			# 	result = lib.outputMatrixDoubleSet(port.node.id, port.id, val.ctypes.data_as(POINTER(c_double)), c_size_t(nrows),c_size_t(ncols))
+
+		if result < 0: raise ValueError('Error writing to port',res)
+		return result
+
+	# Ask an output port to send (Synchronously)
+	# Returns true if successful; check lastErrorMessage() otherwise
+	def sendsync(port):
+		assert(port.node.valid), 'Node is not valid'
+		result = lib.outputSendSync(port.node.id, port.id)
+		return result == 0
+
+
+	def pending(port):
+    	# Returns: true if >0, false if =0, error if <0.
+		return lib.inputPending(port.node.id, port.id)
+
 
 	def portInfo(port):
 		assert(port.node.valid), 'Node is not valid'
@@ -108,7 +251,7 @@ class OBNPort(object):
 
 class OBNNode(object):
 
-	def __init__(node, name, workspace, server ):
+	def __init__(node, name, workspace = "", server= ""):
 		nodeid = c_size_t()
 		result = lib.createOBNNode(name,workspace,server,byref(nodeid))
 		if result != 0 :
@@ -124,14 +267,51 @@ class OBNNode(object):
 		node.term_cb = None
 
 		# empty port dict
-		node.ports = {'input':{} ,'output':{}}
-
+		node.input_ports = {} 
+		node.output_ports = {}
 
 	# write desctiption
+
+	def create_input(node, portName, containerType, elementType, strict = False, formatType = 'ProtoBuf'):
+		assert(node.valid), 'Node is not valid'
+		assert(containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
+		assert(elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
+		portType = 'input'
+
+		portid = lib.createInputPort(node.id,
+									 portName, 
+									 OBNEI_FormatType[formatType],
+									 OBNEI_ContainerType[containerType],
+									 OBNEI_ElementType[elementType],
+									 strict)
+		if portid < 0: raise ValueError("Error creating input port [$result]: ")		
+		else:
+			port = OBNPort(node, portid, portName, portType, containerType, elementType)
+			node.input_ports[portName] = port
+			return port
+
+
+	def create_output(node, portName, containerType, elementType, strict = False, formatType = 'ProtoBuf'):
+		assert(node.valid), 'Node is not valid'
+		assert(containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
+		assert(elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
+		portType = 'output'
+
+		portid = lib.createOutputPort(node.id,
+									 portName, 
+									 OBNEI_FormatType[formatType],
+									 OBNEI_ContainerType[containerType],
+									 OBNEI_ElementType[elementType])
+		if portid < 0: raise ValueError("Error creating input port [$result]: ")
+		else: 
+			 port = OBNPort(node, portid, portName, portType, containerType, elementType)
+			 node.output_ports[portName] = port
+			 return port
+
 	def create_port(node, portType, portName, containerType, elementType, strict = False, formatType = 'ProtoBuf'):
 		assert(node.valid), 'Node is not valid'
 		assert(containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
-		assert(elementType in OBNEI_ElementType), "invalid element type, valid types: 'logical', 'double', 'int32', 'int64', 'uint32', 'uint64'"
+		assert(elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
 		assert(portType in OBNEI_PortType), "invalid port type, valid types: 'input', ''output, 'data'"
 
 
@@ -142,15 +322,17 @@ class OBNNode(object):
 										 OBNEI_ContainerType[containerType],
 										 OBNEI_ElementType[elementType],
 										 strict)
+			if portid < 0: raise ValueError("Error creating input port [$result]: ")
+			else: node.input_ports[portName] = OBNPort(node, portid, portName, portType, containerType, elementType)
 		elif portType == 'output':
 			portid = lib.createOutputPort(node.id,
 										 portName, 
 										 OBNEI_FormatType[formatType],
 										 OBNEI_ContainerType[containerType],
 										 OBNEI_ElementType[elementType])
-
-		if portid < 0: raise ValueError("Error creating input port [$result]: ")				
-		else: node.ports[portType][portName] = OBNPort(node, portid, portName, portType, containerType, elementType)
+			if portid < 0: raise ValueError("Error creating input port [$result]: ")
+			else: node.output_ports[portName] = OBNPort(node, portid, portName, portType, containerType, elementType)
+		
 
 
 
@@ -165,13 +347,13 @@ class OBNNode(object):
 	# set callbacks
 	def on_block_output(node, function, blkid, *args, **kwargs):
 		assert(node.valid), 'Node is not valid'
-		assert(blkid > 0 and blkid <= max_blockid), "Invalid computation block ID."
+		assert(blkid >= 0 and blkid <= max_blockid), "Invalid computation block ID."
 
 		node.block_output_cb[blkid] = OBNCallback(function,*args,**kwargs)
 
-	def on_state_output(node, function, blkid, *args, **kwargs):
+	def on_block_state(node, function, blkid, *args, **kwargs):
 		assert(node.valid), 'Node is not valid'
-		assert(blkid > 0 and blkid <= max_blockid), "Invalid computation block ID."
+		assert(blkid >= 0 and blkid <= max_blockid), "Invalid computation block ID."
 
 		node.block_state_cb[blkid] = OBNCallback(function,*args,**kwargs)
 
