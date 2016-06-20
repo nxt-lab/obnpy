@@ -151,7 +151,7 @@ class OBNNode(object):
 		nodeid = c_size_t()
 		result = lib.createOBNNode(name,workspace,server,byref(nodeid))
 		if result != 0 :
-			raise ValueError('OBN node could not be created',res)
+			raise ValueError('OBN node could not be created',result)
 
 		node.valid = True
 		node.id = nodeid.value
@@ -229,11 +229,6 @@ class OBNNode(object):
 			if portid < 0: raise ValueError("Error creating input port [$result]: ")
 			else: node.output_ports[portName] = OBNPort(node, portid, portName, portType, containerType, elementType)
 		
-
-
-
-
-
 	def delete(node ):
 
 		lib.deleteOBNNode(node.id)
@@ -243,13 +238,13 @@ class OBNNode(object):
 	# set callbacks
 	def on_block_output(node, function, blkid, *args, **kwargs):
 		assert(node.valid), 'Node is not valid'
-		assert(blkid >= 0 and blkid <= max_blockid), "Invalid computation block ID."
+		assert((blkid >= 0) and (blkid <= lib.maxUpdateID())), "Invalid computation block ID."
 
 		node.block_output_cb[blkid] = OBNCallback(function,*args,**kwargs)
 
 	def on_block_state(node, function, blkid, *args, **kwargs):
 		assert(node.valid), 'Node is not valid'
-		assert(blkid >= 0 and blkid <= max_blockid), "Invalid computation block ID."
+		assert(blkid >= 0 and blkid <= lib.maxUpdateID()), "Invalid computation block ID."
 
 		node.block_state_cb[blkid] = OBNCallback(function,*args,**kwargs)
 
@@ -264,17 +259,8 @@ class OBNNode(object):
 		node.term_cb = OBNCallback(function,*args,**kwargs)
 	# callback execution
 	def do_updatey(node,mask):
-		for blkid, callback in node.block_output_cb:
-			if mask == 0:
-				break
-			if (mask & (1 << blkid)) != 0:
-				# If the id is in the mask, run the callback
-				callback()
-    			# ^  bitwise xor
-    			mask ^= (1 << blkid) # reset that bit
-
-	def do_updatex(node,mask):
-		for blkid, callback in node.block_state_cb:
+		
+		for blkid, callback in node.block_output_cb.iteritems():
 			if mask == 0:
 				break
 			if (mask & (1 << blkid)) != 0:
@@ -282,6 +268,36 @@ class OBNNode(object):
 				callback()
 				# ^  bitwise xor
 				mask ^= (1 << blkid) # reset that bit
+		return mask
+
+
+	def do_updatex(node,mask):
+
+		for blkid, callback in node.block_state_cb.iteritems():
+			if mask == 0:
+				break
+			if (mask & (1 << blkid)) != 0:
+				# If the id is in the mask, run the callback 
+				callback()	
+				# ^  bitwise xor 
+				mask ^= (1 << blkid) 
+				# reset that bit
+		return mask		
+
+
+	# Convert a list of block IDs into an update mask
+	@staticmethod
+	def update_mask(*blks):
+	    mask = OBNUpdateMask(0)
+	    maxid = lib.maxUpdateID()
+
+	    for blkid in blks:
+	        iid = c_ulonglong(blkid) # converd to uint64
+	        assert(iid.value <= maxid , "Invalid block ID")
+
+	        mask.value |= (1 << iid.value)
+
+	    return mask
 
 	# Run simulation
 	# Returns: 1 if timeout; 2 if the simulation stopped properly; 3 if stopped with an error
@@ -298,14 +314,15 @@ class OBNNode(object):
 			result = lib.simRunStep(node.id, timeout, byref(event_type), byref(event_args))
 
 			if result == 0:
+				#print("hey there is an event, of type ", event_type.value)
 				# there is an event
-				if event_type == OBNEI_Event_Y:
+				if event_type.value == OBNEI_Event_Y:
 					node.do_updatey(event_args.mask)
-				elif event_type == OBNEI_Event_X:
+				elif event_type.value == OBNEI_Event_X:
 					node.do_updatex(event_args.mask)
-				elif event_type == OBNEI_Event_INIT:
+				elif event_type.value == OBNEI_Event_INIT:
 					node.init_cb()
-				elif event_type == OBNEI_Event_TERM:
+				elif event_type.value == OBNEI_Event_TERM:
 					node.term_cb()
 				# elif event_type == OBNEI_Event_RCV:
 				# Port's RCV event
@@ -340,7 +357,7 @@ class OBNNode(object):
 	def schedule(node, blocks_mask, simtime, timeout = -1.0, *args):
 		assert(node.valid), 'Node is not valid'
 		# optional use
-		# schedule(node, blocks_mask, simtime, timeunit, timeout, timeout)
+		# schedule(node, blocks_mask, simtime, timeout, timeunit)
 
 		if args:
 			# Here, the time is given in simulation time with a given unit (default = seconds) from the beginning of the simulation.
@@ -362,7 +379,7 @@ class OBNNode(object):
 				node.schedule(blocks_mask, clkticks, timeout)
 		else:
 			# Here the time is in the clock ticks, i.e., the number of atomic time units from the beginning of the simulation.
-			return lib.simRequestFutureUpdate(node.id, blocks_mask, simtime, timeout) 
+			return lib.simRequestFutureUpdate(node.id, OBNSimTimeType(int(simtime)), blocks_mask, timeout) 
 		
 
 

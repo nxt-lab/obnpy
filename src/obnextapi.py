@@ -453,3 +453,48 @@ lib.portConnect.argtypes = [c_size_t, c_size_t, c_char_p]
     # // Args: node ID, port's ID
     # // Returns: 0 if successful
     # int portEnableRcvEvent(size_t nodeid, size_t portid);
+
+
+
+# MISC
+
+ #   // Returns the maximum ID allowed for an update type.
+ #   int maxUpdateID();
+#def max_blockid(): return lib.max_blockid()
+
+# Convert a list of block IDs into an update mask
+def update_mask(*blks):
+    mask = OBNUpdateMask(0)
+    maxid = lib.max_blockid()
+
+    for blkid in blks:
+        iid = c_ulonglong(blkid) # converd to uint64
+        assert(iid <= maxid , "Invalid block ID")
+
+        mask |= (1 << iid)
+
+    return mask
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

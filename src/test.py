@@ -13,9 +13,9 @@ def main():
 
 	n2 = OBNNode('node2','ws','tcp://localhost:1883')
 
-	n1.create_port('input','inputport','scalar','double',strict = True)
+	inportscalar = n1.create_input('inputport','scalar','double',strict = True)
 	#n1.input_ports['inputport'].portInfo()
-	n2.create_port('output','outputport','scalar','double',strict = True)
+	outportscalar = n2.create_output('outputport','scalar','double',strict = True)
 
 	res =  n1.input_ports['inputport'].portConnect('ws/node2/outputport')
 	print res
@@ -26,20 +26,23 @@ def main():
 
 	print "sending data from node2/output to node1/output"
 	val = 3
-	n2.output_ports['outputport'].set(val)
-	sendboolscalar = n2.output_ports['outputport'].sendsync()
+	#n2.output_ports['outputport'].set(val)
+	#sendboolscalar = n2.output_ports['outputport'].sendsync()
+	outportscalar.set(val)
+	sendboolscalar = outportscalar.sendsync()
 	print "sendbool is ",sendboolscalar 
 
 	time.sleep(1)
 
 
 	print "checking pending data at input port"
-	res = n1.input_ports['inputport'].pending()
+	#res = n1.input_ports['inputport'].pending()
+	res = inportscalar.pending()
 	print res
 	print "reading data from n node1/output"
 	
-	getval = n1.input_ports['inputport'].get()
-
+	#getval = n1.input_ports['inputport'].get()
+	getval = inportscalar.get()
 	print getval
 
 	print "======= VECTOR TEST ======="
