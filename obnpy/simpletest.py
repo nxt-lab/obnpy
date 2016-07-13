@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from obnnode import *
+from obnpy.obnnode import *
 import time
 import pdb
 import numpy as np
