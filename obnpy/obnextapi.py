@@ -8,14 +8,17 @@ from numpy.ctypeslib import ndpointer
 # NO REF TO MQTT OR YARP ? HOW TO SPECIFY ?
 
 
-libpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'libobnext-mqtt.*'))
-lib = cdll.LoadLibrary(glob.glob(libpath)[0])
+#### Load dynamic library for the obn node c interface #####
+## find local library
+#libpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'libobnext-mqtt.*'))
+#lib = cdll.LoadLibrary(glob.glob(libpath)[0])
+
+# do first : add to ~/.bash_profile the following line
+#export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$OBN_DIR/nodecpp/build
+lib =  CDLL('libobnext-mqtt.dylib')
 
 # declare ctypes argument and return types
 # refer to: https://docs.python.org/2/library/ctypes.html
-
-
-
 
 # /** The update mask type is uint64_t, see obnsim_basic.h for the definition. That should match the definition here. */
 # /** Type to pass arguments of an event */
@@ -462,18 +465,7 @@ lib.portConnect.argtypes = [c_size_t, c_size_t, c_char_p]
  #   int maxUpdateID();
 #def max_blockid(): return lib.max_blockid()
 
-# Convert a list of block IDs into an update mask
-def update_mask(*blks):
-    mask = OBNUpdateMask(0)
-    maxid = lib.max_blockid()
 
-    for blkid in blks:
-        iid = c_ulonglong(blkid) # converd to uint64
-        assert(iid <= maxid , "Invalid block ID")
-
-        mask |= (1 << iid)
-
-    return mask
 
 
 
