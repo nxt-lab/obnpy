@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 from ctypes import *
+from ctypes.util import find_library
 import glob
 import numpy as num
 from numpy.ctypeslib import ndpointer
