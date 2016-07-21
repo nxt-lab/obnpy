@@ -15,7 +15,7 @@ from numpy.ctypeslib import ndpointer
 
 # do first : add to ~/.bash_profile the following line
 #export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$OBN_DIR/nodecpp/build
-lib =  CDLL('libobnext-mqtt.dylib')
+lib = CDLL(find_library('libobnext-mqtt'))
 
 # declare ctypes argument and return types
 # refer to: https://docs.python.org/2/library/ctypes.html
