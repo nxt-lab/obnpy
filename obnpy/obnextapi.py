@@ -3,6 +3,7 @@ import os
 from ctypes import *
 from ctypes.util import find_library
 import glob
+import sys
 import numpy as num
 from numpy.ctypeslib import ndpointer
 # QUESTIONS
@@ -14,9 +15,16 @@ from numpy.ctypeslib import ndpointer
 #libpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'libobnext-mqtt.*'))
 #lib = cdll.LoadLibrary(glob.glob(libpath)[0])
 
-# do first : add to ~/.bash_profile the following line
+# do first on MAC : add to ~/.bash_profile the following line
 #export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$OBN_DIR/nodecpp/build
-lib = CDLL(find_library('libobnext-mqtt'))
+
+# load dynamic library with correct extension according to the OS
+if sys.platform == "linux" or sys.platform == "linux2":
+    lib = CDLL('libobnext-mqtt.so') # linux
+elif sys.platform == "darwin":
+    lib = CDLL('libobnext-mqtt.dylib')# OS X
+elif sys.platform == "win32":
+    lib = CDLL('libobnext-mqtt.dll')# Windows...
 
 # declare ctypes argument and return types
 # refer to: https://docs.python.org/2/library/ctypes.html
