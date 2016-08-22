@@ -6,7 +6,7 @@ from distutils.core import setup
 setup(
     name = 'obnpy',
     packages = find_packages(),
-    version = '0.4',
+    version = '0.5',
     description = 'Python interface for OpenBuildNet node',
     author = 'altugb',
     author_email = 'altug.bitlislioglu@epfl.ch',
