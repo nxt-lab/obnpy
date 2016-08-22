@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../src')
-from obnnode import *
+from obnpy.obnnode import *
 import numpy as num
 
 
