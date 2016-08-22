@@ -153,6 +153,7 @@ class OBNNode(object):
 		if result != 0 :
 			raise ValueError('OBN node could not be created',result)
 
+		node.name = name
 		node.valid = True
 		node.id = nodeid.value
 
@@ -331,9 +332,10 @@ class OBNNode(object):
 			elif result == 1:
 				warn("Simulation has timed out.")
 				if stopIfTimeout:
-					print("I should be stopping the sim immediately")
+					# stop the simulation immediately
+					node.stop(stopnow = True)
 			elif result == 2:
-				print("I should be stopping properly")
+				print("Simulation of node " + node.name + " has stopped properly")
 			elif result == 3:
 				warn("Simulation has stopped due to an error.")
 			else:
