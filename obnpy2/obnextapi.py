@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 from ctypes import *
 from ctypes.util import find_library
@@ -473,29 +472,3 @@ lib.portConnect.argtypes = [c_size_t, c_size_t, c_char_p]
  #   // Returns the maximum ID allowed for an update type.
  #   int maxUpdateID();
 #def max_blockid(): return lib.max_blockid()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

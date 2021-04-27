@@ -1,11 +1,9 @@
-#!/usr/bin/env python
-
 from ctypes import *
 from obnextapi import *
 from warnings import *
 from datetime import datetime
 from weakref import *
-import pdb
+# import pdb
 import ctypes
 import numpy as num
 # check raising errors!!!!

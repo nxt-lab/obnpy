@@ -16,6 +16,3 @@ class OBNNode(object):
 
 		lib.deleteOBNNode(self.id)
 		print("Node deleted")
-
-
-
