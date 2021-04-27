@@ -7,7 +7,7 @@ from setuptools import setup
 setup(
     name = 'obnpy2',
     packages=['obnpy2'],
-    version = '1.0',
+    version = '1.0.1',
     description = 'Python client library for OpenBuildNet',
     author = 'nxtruong',
     author_email = 'truong.nghiem@gmail.com',
