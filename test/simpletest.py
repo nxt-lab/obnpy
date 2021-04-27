@@ -2,12 +2,11 @@
 
 from obnpy2.obnnode import *
 import time
-import pdb
 import numpy as np
 
 def main():
 
-	print "======= SCALAR TEST ======="
+	print("======= SCALAR TEST =======")
 
 	n1 = OBNNode('node1','ws','tcp://localhost:1883')
 
@@ -18,34 +17,34 @@ def main():
 	outportscalar = n2.create_output('outputport','scalar','double',strict = True)
 
 	res =  n1.input_ports['inputport'].portConnect('ws/node2/outputport')
-	print res
+	print(res)
 	if res == 0: print('successful port connection')	
 
 	getval = n1.input_ports['inputport'].get()
 
 
-	print "sending data from node2/output to node1/output"
+	print("sending data from node2/output to node1/output")
 	val = 3
 	#n2.output_ports['outputport'].set(val)
 	#sendboolscalar = n2.output_ports['outputport'].sendsync()
 	outportscalar.set(val)
 	sendboolscalar = outportscalar.sendsync()
-	print "sendbool is ",sendboolscalar 
+	print("sendbool is ", sendboolscalar)
 
 	time.sleep(1)
 
 
-	print "checking pending data at input port"
+	print("checking pending data at input port")
 	#res = n1.input_ports['inputport'].pending()
 	res = inportscalar.pending()
-	print res
-	print "reading data from n node1/output"
+	print(res)
+	print("reading data from n node1/output")
 	
 	#getval = n1.input_ports['inputport'].get()
 	getval = inportscalar.get()
-	print getval
+	print(getval)
 
-	print "======= VECTOR TEST ======="
+	print("======= VECTOR TEST =======")
 
 	# create ports
 	n1.create_input('invecport','vector','int32',strict = False)
@@ -53,7 +52,7 @@ def main():
 
 	# connecting ports
 	res =  n1.input_ports['invecport'].portConnect('ws/node2/outvecport')
-	print res
+	print(res)
 	if res == 0: print('successful port connection')	
 
 	# print("trying dry get on vector input port")
@@ -61,25 +60,25 @@ def main():
 
 	#while not n1.input_ports['invecport'].pending():
 
-	print "no pending data at input port"
+	print("no pending data at input port")
 
-	print "sending vector from node2 to node1"
+	print("sending vector from node2 to node1")
 	invec = np.array([5.2,2.3,3.4,4.1,5.2])
-	print invec
+	print(invec)
 	n2.output_ports['outvecport'].set(invec)
 	sendbool = n2.output_ports['outvecport'].sendsync()
 
-	print "sendbool is ",sendbool 
+	print("sendbool is ", sendbool)
 
 	time.sleep(1)
 
 		#pdb.set_trace()
 	
-	print "reading vector from n node1/output"
+	print("reading vector from n node1/output")
 	getval = n1.input_ports['invecport'].get()
-	print getval
+	print(getval)
 
-	print "======= MATRIX TEST ======="
+	print("======= MATRIX TEST =======")
 
 	# create ports
 	n1.create_input('inmatport','matrix','bool',strict = False)
@@ -87,7 +86,7 @@ def main():
 
 	# connecting ports
 	res =  n1.input_ports['inmatport'].portConnect('ws/node2/outmatport')
-	print res
+	print(res)
 	if res == 0: print('successful port connection')	
 
 	# print("trying dry get on vector input port")
@@ -95,23 +94,23 @@ def main():
 
 	#while not n1.input_ports['inmatport'].pending():
 
-	print "no pending data at input port"
+	print("no pending data at input port")
 
-	print "sending vector from node2 to node1"
+	print("sending vector from node2 to node1")
 	inmat = np.array([[0.5,0],[4,5],[3.4, 2.1]],dtype = np.float64)
-	print inmat
+	print(inmat)
 	n2.output_ports['outmatport'].set(inmat)
 	sendbool = n2.output_ports['outmatport'].sendsync()
 
-	print "sendbool is ",sendbool 
+	print("sendbool is ", sendbool)
 
 	time.sleep(1)
 
 		#pdb.set_trace()
 	
-	print "reading vector from n node1/output"
+	print("reading vector from n node1/output")
 	getval = n1.input_ports['inmatport'].get()
-	print getval
+	print(getval)
 
 
 

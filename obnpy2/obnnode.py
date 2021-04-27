@@ -1,5 +1,5 @@
 from ctypes import *
-from obnextapi import *
+from .obnextapi import *
 from warnings import *
 from datetime import datetime
 from weakref import *
@@ -37,7 +37,7 @@ class OBNPort(object):
 		port.valid = True
 
 	def get(port, defVal = None):
-		assert(port.node.valid), 'Node is not valid'
+		assert (port.node.valid), 'Node is not valid'
 		if port.container == 'scalar':
 
 			val = ctypesdict[port.elementType](0)
@@ -90,7 +90,7 @@ class OBNPort(object):
 		
 
 	def set(port,val):
-		assert(port.node.valid), 'Node is not valid'
+		assert (port.node.valid), 'Node is not valid'
 		if port.container == 'scalar':
 
 			result = outputScalarSet[port.elementType](port.node.id, port.id, val)
@@ -113,7 +113,7 @@ class OBNPort(object):
 	# Ask an output port to send (Synchronously)
 	# Returns true if successful; check lastErrorMessage() otherwise
 	def sendsync(port):
-		assert(port.node.valid), 'Node is not valid'
+		assert (port.node.valid), 'Node is not valid'
 		result = lib.outputSendSync(port.node.id, port.id)
 		return result == 0
 
@@ -124,7 +124,7 @@ class OBNPort(object):
 
 
 	def portInfo(port):
-		assert(port.node.valid), 'Node is not valid'
+		assert (port.node.valid), 'Node is not valid'
 		pInfo = OBNEI_PortInfo()
 		result = lib.portInfo(port.node.id, port.id, byref(pInfo))
 		if result != 0: raise ValueError('Error getting port information',res)
@@ -139,15 +139,15 @@ class OBNPort(object):
 
 	# Returns: 0 if successful, otherwise error ID (last error message contains the error message).
 	def portConnect(port, srcPort):
-		assert(port.node.valid), 'Node is not valid'
-		result = lib.portConnect(port.node.id, port.id, srcPort)
+		assert (port.node.valid), 'Node is not valid'
+		result = lib.portConnect(port.node.id, port.id, bytes(srcPort, encoding='utf-8'))
 		return result
 
 class OBNNode(object):
 
 	def __init__(node, name, workspace = "", server= ""):
 		nodeid = c_size_t()
-		result = lib.createOBNNode(name,workspace,server,byref(nodeid))
+		result = lib.createOBNNode(bytes(name, encoding='utf-8'), bytes(workspace, encoding='utf-8'), bytes(server, encoding='utf-8'), byref(nodeid))
 		if result != 0 :
 			raise ValueError('OBN node could not be created',result)
 
@@ -168,17 +168,17 @@ class OBNNode(object):
 	# write desctiption
 
 	def create_input(node, portName, containerType, elementType, strict = False, formatType = 'ProtoBuf'):
-		assert(node.valid), 'Node is not valid'
-		assert(containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
-		assert(elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
+		assert (node.valid), 'Node is not valid'
+		assert (containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
+		assert (elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
 		portType = 'input'
 
 		portid = lib.createInputPort(node.id,
-									 portName, 
-									 OBNEI_FormatType[formatType],
-									 OBNEI_ContainerType[containerType],
-									 OBNEI_ElementType[elementType],
-									 strict)
+					     bytes(portName, encoding='utf-8'), 
+					     OBNEI_FormatType[formatType],
+					     OBNEI_ContainerType[containerType],
+					     OBNEI_ElementType[elementType],
+					     strict)
 		if portid < 0: raise ValueError("Error creating input port [$result]: ")		
 		else:
 			port = OBNPort(node, portid, portName, portType, containerType, elementType)
@@ -187,16 +187,16 @@ class OBNNode(object):
 
 
 	def create_output(node, portName, containerType, elementType, strict = False, formatType = 'ProtoBuf'):
-		assert(node.valid), 'Node is not valid'
-		assert(containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
-		assert(elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
+		assert (node.valid), 'Node is not valid'
+		assert (containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
+		assert (elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
 		portType = 'output'
 
 		portid = lib.createOutputPort(node.id,
-									 portName, 
-									 OBNEI_FormatType[formatType],
-									 OBNEI_ContainerType[containerType],
-									 OBNEI_ElementType[elementType])
+					      bytes(portName, encoding='utf-8'),
+					      OBNEI_FormatType[formatType],
+					      OBNEI_ContainerType[containerType],
+					      OBNEI_ElementType[elementType])
 		if portid < 0: raise ValueError("Error creating input port [$result]: ")
 		else: 
 			 port = OBNPort(node, portid, portName, portType, containerType, elementType)
@@ -204,27 +204,27 @@ class OBNNode(object):
 			 return port
 
 	def create_port(node, portType, portName, containerType, elementType, strict = False, formatType = 'ProtoBuf'):
-		assert(node.valid), 'Node is not valid'
-		assert(containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
-		assert(elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
-		assert(portType in OBNEI_PortType), "invalid port type, valid types: 'input', ''output, 'data'"
+		assert (node.valid), 'Node is not valid'
+		assert (containerType in OBNEI_ContainerType), "invalid container type, valid types: 'scalar' ,'vector', 'matrix', 'binary'"
+		assert (elementType in OBNEI_ElementType), "invalid element type, valid types: 'bool', 'double', 'int32', 'int64', 'uint32', 'uint64'"
+		assert (portType in OBNEI_PortType), "invalid port type, valid types: 'input', ''output, 'data'"
 
 
 		if portType == 'input':
 			portid = lib.createInputPort(node.id,
-										 portName, 
-										 OBNEI_FormatType[formatType],
-										 OBNEI_ContainerType[containerType],
-										 OBNEI_ElementType[elementType],
-										 strict)
+						     bytes(portName, encoding='utf-8'),
+						     OBNEI_FormatType[formatType],
+						     OBNEI_ContainerType[containerType],
+						     OBNEI_ElementType[elementType],
+						     strict)
 			if portid < 0: raise ValueError("Error creating input port [$result]: ")
 			else: node.input_ports[portName] = OBNPort(node, portid, portName, portType, containerType, elementType)
 		elif portType == 'output':
 			portid = lib.createOutputPort(node.id,
-										 portName, 
-										 OBNEI_FormatType[formatType],
-										 OBNEI_ContainerType[containerType],
-										 OBNEI_ElementType[elementType])
+						      bytes(portName, encoding='utf-8'),
+						      OBNEI_FormatType[formatType],
+						      OBNEI_ContainerType[containerType],
+						      OBNEI_ElementType[elementType])
 			if portid < 0: raise ValueError("Error creating input port [$result]: ")
 			else: node.output_ports[portName] = OBNPort(node, portid, portName, portType, containerType, elementType)
 		
@@ -236,30 +236,30 @@ class OBNNode(object):
 
 	# set callbacks
 	def on_block_output(node, function, blkid, *args, **kwargs):
-		assert(node.valid), 'Node is not valid'
-		assert((blkid >= 0) and (blkid <= lib.maxUpdateID())), "Invalid computation block ID."
+		assert (node.valid), 'Node is not valid'
+		assert ((blkid >= 0) and (blkid <= lib.maxUpdateID())), "Invalid computation block ID."
 
 		node.block_output_cb[blkid] = OBNCallback(function,*args,**kwargs)
 
 	def on_block_state(node, function, blkid, *args, **kwargs):
-		assert(node.valid), 'Node is not valid'
-		assert(blkid >= 0 and blkid <= lib.maxUpdateID()), "Invalid computation block ID."
+		assert (node.valid), 'Node is not valid'
+		assert (blkid >= 0 and blkid <= lib.maxUpdateID()), "Invalid computation block ID."
 
 		node.block_state_cb[blkid] = OBNCallback(function,*args,**kwargs)
 
 	def on_init(node, function, *args, **kwargs):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 
 		node.init_cb = OBNCallback(function,*args,**kwargs)
 
 	def on_term(node, function, *args, **kwargs):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 
 		node.term_cb = OBNCallback(function,*args,**kwargs)
 	# callback execution
 	def do_updatey(node,mask):
 		
-		for blkid, callback in node.block_output_cb.iteritems():
+		for blkid, callback in node.block_output_cb.items():
 			if mask == 0:
 				break
 			if (mask & (1 << blkid)) != 0:
@@ -272,7 +272,7 @@ class OBNNode(object):
 
 	def do_updatex(node,mask):
 
-		for blkid, callback in node.block_state_cb.iteritems():
+		for blkid, callback in node.block_state_cb.items():
 			if mask == 0:
 				break
 			if (mask & (1 << blkid)) != 0:
@@ -292,7 +292,7 @@ class OBNNode(object):
 
 	    for blkid in blks:
 	        iid = c_ulonglong(blkid) # converd to uint64
-	        assert(iid.value <= maxid , "Invalid block ID")
+	        assert (iid.value <= maxid), "Invalid block ID"
 
 	        mask.value |= (1 << iid.value)
 
@@ -302,7 +302,7 @@ class OBNNode(object):
 	# Returns: 1 if timeout; 2 if the simulation stopped properly; 3 if stopped with an error
 
 	def run(node, timeout = -1.0, stopIfTimeout = True):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 
 		event_type = c_uint()
 		event_args = OBNEI_EventArg()
@@ -342,7 +342,7 @@ class OBNNode(object):
 		return result
 
 	def stop(node, stopnow = False):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 
 		if stopnow:
 			result = lib.nodeStopSimulation(node.id)
@@ -355,7 +355,7 @@ class OBNNode(object):
 	# Returns the status of the request:
 	# 0 if successful (accepted), -1 if timeout (failed), -2 if request is invalid, >0 if other errors (failed, see OBN documents for details).
 	def schedule(node, blocks_mask, simtime, timeout = -1.0, *args):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 		# optional use
 		# schedule(node, blocks_mask, simtime, timeout, timeunit)
 
@@ -374,7 +374,7 @@ class OBNNode(object):
 				# Here, the time is given in wallclock time.
 				# This case converts the future time to the atomic clock ticks and call the default method
 				dt = simtime - node.wallclock_time()
-				assert(dt.total_seconds()>0), "Requested time must be strictly in the future."
+				assert (dt.total_seconds()>0), "Requested time must be strictly in the future."
 				t = node.simtime('ms') + dt.total_seconds()*1e3
 				node.schedule(blocks_mask, clkticks, timeout)
 		else:
@@ -386,10 +386,10 @@ class OBNNode(object):
 	# Get current simulation time in given unit
 	# Possible units as strings: us, ms, s, m, h
 	def sim_time(node, unit = 's'):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 		# Time unit: 0 = second, -1 = millisecond, -2 = microsecond, 1 = minute, 2 = hour
 		timeunits = {'s':0, 'ms':-1, 'us':-2, 'm':1, 'h':2}
-		assert(unit in timeunits), 'Invalid time unit'
+		assert (unit in timeunits), 'Invalid time unit'
 
 		curtime = c_double(0.0)
 		result = lib.nodeSimulationTime(node.id, timeunits[unit], byref(curtime))
@@ -399,7 +399,7 @@ class OBNNode(object):
 
 	# Returns the atomic time unit as an integer in microseconds
 	def timeunit(node):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 
 		tu = OBNSimTimeType(0)
 		result = lib.nodeTimeUnit(node.id,byref(tu))
@@ -408,7 +408,7 @@ class OBNNode(object):
 
 	# Get current wallclock time as Python's DateTime
 	def wallclock_time(node):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 		unixtime = c_longlong(0)
 		result = lib.nodeWallClockTime(node.id, byref(unixtime))
 		if result != 0:
@@ -419,7 +419,7 @@ class OBNNode(object):
 
 	# Internal function to check state of node
 	def _is_state(node, apifun):
-		assert(node.valid), 'Node is not valid'
+		assert (node.valid), 'Node is not valid'
 
 		result = apifun(node.id)
 		if result < 0 :  raise ValueError("Error querying node's state [$result]: ")

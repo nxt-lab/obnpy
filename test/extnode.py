@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../src')
+sys.path.append('../')
 from obnpy2.obnnode import *
 import numpy as num
 
@@ -37,38 +37,34 @@ def main():
 	print("Final status: ", status)
 
 def termcallback():
-		print("TERM")
+	print("TERM")
 
 def initcallback():
-		print("INIT")
+	print("INIT")
 
 def blockoutput(node,MAINBLOCK):
-		print("Current time is "+ str(node.sim_time())+ "s.")
-	  	#println("Current time is ", wallclock_time(node))
-	  	print("Scalar double: "+ str(node.udouble.get()) )
-	  	#print("Scalar double: "+ str(node.input_ports['input_scalardouble'].get())
-	  	node.ydouble.set(node.d)
-	  	node.d += 1
+	print("Current time is "+ str(node.sim_time())+ "s.")
+	#println("Current time is ", wallclock_time(node))
+	print("Scalar double: "+ str(node.udouble.get()))
+	#print("Scalar double: "+ str(node.input_ports['input_scalardouble'].get())
+	node.ydouble.set(node.d)
+	node.d += 1
 
-	  	node.yvector.set(node.v)
-	  	node.v += num.ones(2)
+	node.yvector.set(node.v)
+	node.v += num.ones(2)
 
-	  	node.ymatrix.set(node.m)
-	  	node.m += num.eye(2)
+	node.ymatrix.set(node.m)
+	node.m += num.eye(2)
 
-	  	node.schedule(node.update_mask(MAINBLOCK),node.sim_time()+0.5, 1 ,'s')
+	node.schedule(node.update_mask(MAINBLOCK),node.sim_time()+0.5, 1 ,'s')
 
 def blockstate(node):
-		node.x += node.udouble.get()
-		print("double: " + str(node.x))
-		print("vector : ")
-		print node.uvector.get()
-		print("matrix : ")
-		print node.umatrix.get()
+	node.x += node.udouble.get()
+	print("double: " + str(node.x))
+	print("vector : ")
+	print(node.uvector.get())
+	print("matrix : ")
+	print(node.umatrix.get())
 
 if __name__ == '__main__':
 	main()
-
-
-
-
